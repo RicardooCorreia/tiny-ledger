@@ -39,7 +39,7 @@ public class AccountLifecycleFunctionalTest {
 
         // given
         RestTestClient.RequestHeadersSpec<?> request = client.post()
-                .uri("/accounts")
+                .uri("/account")
                 .body(Map.of(
                         "name", "New account"
                 ));
@@ -52,9 +52,9 @@ public class AccountLifecycleFunctionalTest {
                 .expectStatus().isCreated()
                 .expectBody()
                 .jsonPath("$.name").isEqualTo("New account")
-                .jsonPath("$.balance").isEqualTo("0")
-                .jsonPath("$.id").value(UUID.class, id -> {
-                    Account account = accountRepository.find(id).orElseThrow();
+                .jsonPath("$.balance").isEqualTo(0)
+                .jsonPath("$.id").value(String.class, id -> {
+                    Account account = accountRepository.find(UUID.fromString(id)).orElseThrow();
                     assertThat(account.getName()).isEqualTo("New account");
                     assertThat(account.getBalance()).isEqualTo(BigDecimal.ZERO);
                 });
@@ -68,7 +68,7 @@ public class AccountLifecycleFunctionalTest {
         accountRepository.upsert(account);
 
         RestTestClient.RequestHeadersSpec<?> request = client.get()
-                .uri("/accounts/%s".formatted(account.getId()));
+                .uri("/account/%s".formatted(account.getId()));
 
         // when
         RestTestClient.ResponseSpec result = request.exchange();
@@ -77,7 +77,7 @@ public class AccountLifecycleFunctionalTest {
         result
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.id").isEqualTo(account.getId())
+                .jsonPath("$.id").isEqualTo(account.getId().toString())
                 .jsonPath("$.name").isEqualTo(account.getName())
                 .jsonPath("$.balance").isEqualTo(account.getBalance());
     }

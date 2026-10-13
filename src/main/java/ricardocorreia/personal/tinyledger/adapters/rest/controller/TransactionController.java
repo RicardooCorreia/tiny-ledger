@@ -48,13 +48,7 @@ public class TransactionController {
                     description = "Transactions returned",
                     content = @Content(
                             mediaType = "application/json",
-                            schema = @Schema(type = "array", implementation = TransactionResponse.class))),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Account not found",
-                    content = @Content(
-                            mediaType = "text/plain",
-                            examples = @ExampleObject(value = "Account with ID [550e8400-e29b-41d4-a716-446655440000] not found")))
+                            schema = @Schema(type = "array", implementation = TransactionResponse.class)))
     })
     @GetMapping("/account/{accountId}/transactions")
     public ResponseEntity<List<TransactionResponse>> listAccountTransactions(@PathVariable UUID accountId) {

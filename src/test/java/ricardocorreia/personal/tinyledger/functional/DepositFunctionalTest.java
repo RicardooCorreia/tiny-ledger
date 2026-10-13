@@ -8,7 +8,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import ricardocorreia.personal.tinyledger.domain.model.Account;
+import ricardocorreia.personal.tinyledger.domain.model.Transaction;
 import ricardocorreia.personal.tinyledger.ports.api.AccountRepository;
+import ricardocorreia.personal.tinyledger.ports.api.TransactionRepository;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -26,6 +28,8 @@ public class DepositFunctionalTest {
 
     @Autowired
     AccountRepository accountRepository;
+    @Autowired
+    TransactionRepository transactionRepository;
 
     @BeforeEach
     void setUp() {
@@ -44,7 +48,7 @@ public class DepositFunctionalTest {
         accountRepository.upsert(account);
 
         RestTestClient.RequestHeadersSpec<?> request = client.post()
-                .uri("/accounts/%s/deposits".formatted(account.getId()))
+                .uri("/account/%s/deposits".formatted(account.getId()))
                 .body(Map.of(
                         "amount", 20
                 ));
@@ -54,7 +58,26 @@ public class DepositFunctionalTest {
 
         // then
         result
-                .expectStatus().isCreated();
-        // TODO :: validate transaction response
+                .expectStatus().isCreated()
+                .expectHeader().valueEquals("Location", "/account/%s/transactions".formatted(account.getId()))
+                .expectBody()
+                .jsonPath("$.type").isEqualTo("DEPOSIT")
+                .jsonPath("$.amount").isEqualTo(20)
+                .jsonPath("$.fromAccountId").doesNotExist()
+                .jsonPath("$.toAccountId").isEqualTo(account.getId().toString())
+                .jsonPath("$.id").value(String.class, id -> {
+                    Transaction.Deposit deposit = (Transaction.Deposit) transactionRepository.findFor(account.getId()).stream()
+                            .filter(transaction -> transaction.id().toString().equals(id))
+                            .findFirst().orElseThrow();
+                    assertThat(deposit.amount()).isEqualByComparingTo("20");
+                    assertThat(deposit.accountId()).isEqualTo(account.getId());
+                })
+                .jsonPath("$.instant").value(String.class, instant -> {
+                    Transaction.Deposit deposit = (Transaction.Deposit) transactionRepository.findFor(account.getId()).getFirst();
+                    assertThat(instant).isEqualTo(deposit.timestamp().toString());
+                });
+
+        assertThat(accountRepository.find(account.getId()).orElseThrow().getBalance())
+                .isEqualByComparingTo("30");
     }
 }

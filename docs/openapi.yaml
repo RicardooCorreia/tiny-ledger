@@ -1,0 +1,309 @@
+openapi: 3.1.0
+info:
+  title: OpenAPI definition
+  version: v0
+servers:
+- url: http://localhost:8080
+  description: Generated server url
+paths:
+  /transfers:
+    post:
+      tags:
+      - transaction-controller
+      summary: Transfer funds
+      description: Transfers a positive amount from one account to another.
+      operationId: transfer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferRequest"
+        required: true
+      responses:
+        "201":
+          description: Transfer recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResponse"
+        "400":
+          description: "Request validation failed, amount is not positive, or source\
+            \ and destination are the same"
+          content:
+            text/plain:
+              example: "From account and to account cannot be the same in a Transfer\
+                \ transaction. Account ID: [550e8400-e29b-41d4-a716-446655440000]"
+        "404":
+          description: Source or destination account not found
+          content:
+            text/plain:
+              example: "Account with ID [550e8400-e29b-41d4-a716-446655440000] not\
+                \ found"
+        "409":
+          description: Insufficient balance
+          content:
+            text/plain:
+              example: "Account with ID [550e8400-e29b-41d4-a716-446655440000] does\
+                \ not have enough balance. Current: [10], requested: [25], difference:\
+                \ [15]"
+  /account:
+    post:
+      tags:
+      - account-controller
+      summary: Create an account
+      description: Creates an account with a zero balance.
+      operationId: createAccount
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAccountRequest"
+        required: true
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountResponse"
+        "400":
+          description: Request validation failed
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AccountResponse"
+  /account/{accountId}/withdrawals:
+    post:
+      tags:
+      - transaction-controller
+      summary: Withdraw funds
+      description: Withdraws a positive amount from the account and records a withdrawal
+        transaction.
+      operationId: withdrawal
+      parameters:
+      - name: accountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawalRequest"
+        required: true
+      responses:
+        "201":
+          description: Withdrawal recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResponse"
+        "400":
+          description: Request validation failed or amount is not positive
+          content:
+            text/plain:
+              example: "Input amount needs to be positive, instead got [-1]"
+        "404":
+          description: Account not found
+          content:
+            text/plain:
+              example: "Account with ID [550e8400-e29b-41d4-a716-446655440000] not\
+                \ found"
+        "409":
+          description: Insufficient balance
+          content:
+            text/plain:
+              example: "Account with ID [550e8400-e29b-41d4-a716-446655440000] does\
+                \ not have enough balance. Current: [10], requested: [25], difference:\
+                \ [15]"
+  /account/{accountId}/deposits:
+    post:
+      tags:
+      - transaction-controller
+      summary: Deposit funds
+      description: Adds a positive amount to the account and records a deposit transaction.
+      operationId: deposit
+      parameters:
+      - name: accountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepositRequest"
+        required: true
+      responses:
+        "201":
+          description: Deposit recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResponse"
+        "400":
+          description: Request validation failed or amount is not positive
+          content:
+            text/plain:
+              example: "Input amount needs to be positive, instead got [-1]"
+        "404":
+          description: Account not found
+          content:
+            text/plain:
+              example: "Account with ID [550e8400-e29b-41d4-a716-446655440000] not\
+                \ found"
+  /account/{accountId}:
+    get:
+      tags:
+      - account-controller
+      summary: Get an account
+      description: Returns the account details and current balance.
+      operationId: getAccount
+      parameters:
+      - name: accountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: Account found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountResponse"
+        "404":
+          description: Account not found
+          content:
+            text/plain:
+              example: "Account with ID [550e8400-e29b-41d4-a716-446655440000] not\
+                \ found"
+  /account/{accountId}/transactions:
+    get:
+      tags:
+      - transaction-controller
+      summary: List account transactions
+      description: "Returns transactions involving the specified account, in repository\
+        \ order."
+      operationId: listAccountTransactions
+      parameters:
+      - name: accountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: Transactions returned
+          content:
+            application/json:
+              schema:
+                type: array
+                $ref: "#/components/schemas/TransactionResponse"
+components:
+  schemas:
+    TransferRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+          minimum: 0.01
+        fromAccountId:
+          type: string
+          format: uuid
+        toAccountId:
+          type: string
+          format: uuid
+      required:
+      - amount
+      - fromAccountId
+      - toAccountId
+    TransactionResponse:
+      type: object
+      description: "A deposit, withdrawal, or transfer recorded for an account."
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique transaction identifier.
+          example: 550e8400-e29b-41d4-a716-446655440001
+        type:
+          type: string
+          description: "Transaction type. Can be DEPOSIT, WITHDRAWAL or TRANSFER"
+          enum:
+          - DEPOSIT
+          - WITHDRAWAL
+          - TRANSFER
+          example: DEPOSIT
+        amount:
+          type: number
+          description: Positive transaction amount.
+          example: 125.5
+          minimum: 0.01
+        instant:
+          type: string
+          format: date-time
+          description: Time the transaction was recorded in UTC.
+          example: 2026-10-13T09:30:00Z
+        fromAccountId:
+          type:
+          - string
+          - "null"
+          format: uuid
+          description: Source account. Null for deposits.
+          example: 550e8400-e29b-41d4-a716-446655440000
+        toAccountId:
+          type:
+          - string
+          - "null"
+          format: uuid
+          description: Destination account. Null for withdrawals.
+          example: 550e8400-e29b-41d4-a716-446655440000
+    CreateAccountRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+      required:
+      - name
+    AccountResponse:
+      type: object
+      description: Account details and current balance.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique account identifier
+          example: 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+          description: Account holder or account name
+          example: Savings
+        balance:
+          type: number
+          description: Current balance
+          example: 125.5
+          minimum: 0
+    WithdrawalRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+          minimum: 0.01
+      required:
+      - amount
+    DepositRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+          minimum: 0.01
+      required:
+      - amount

@@ -69,6 +69,22 @@ class TransactionTest {
         }
 
         @Test
+        void should_not_be_equals_to_other_deposit_that_has_the_different_id() {
+
+            // given
+            Instant instant = Instant.now();
+            UUID accountId = UUID.randomUUID();
+            Deposit deposit1 = new Deposit(UUID.randomUUID(), BigDecimal.ONE, instant, accountId);
+            Deposit deposit2 = new Deposit(UUID.randomUUID(), BigDecimal.ONE, instant, accountId);
+
+            // when
+            boolean result = deposit1.equals(deposit2);
+
+            // then
+            assertFalse(result);
+        }
+
+        @Test
         void should_not_be_equals_to_other_other_transaction_type() {
 
             // given
@@ -134,6 +150,22 @@ class TransactionTest {
 
             // then
             assertTrue(result);
+        }
+
+        @Test
+        void should_not_be_equals_to_other_withdrawal_that_has_the_different_id() {
+
+            // given
+            Instant instant = Instant.now();
+            UUID accountId = UUID.randomUUID();
+            Withdrawal withdrawal1 = new Withdrawal(UUID.randomUUID(), BigDecimal.ONE, instant, accountId);
+            Withdrawal withdrawal2 = new Withdrawal(UUID.randomUUID(), BigDecimal.ONE, instant, accountId);
+
+            // when
+            boolean result = withdrawal1.equals(withdrawal2);
+
+            // then
+            assertFalse(result);
         }
 
         @Test
@@ -205,6 +237,23 @@ class TransactionTest {
 
             // then
             assertTrue(result);
+        }
+
+        @Test
+        void should_not_be_equals_to_other_transfer_that_has_the_different_id() {
+
+            // given
+            Instant instant = Instant.now();
+            UUID fromAccountId = UUID.randomUUID();
+            UUID toAccountId = UUID.randomUUID();
+            Transfer transfer1 = new Transfer(UUID.randomUUID(), BigDecimal.ONE, instant, fromAccountId, toAccountId);
+            Transfer transfer2 = new Transfer(UUID.randomUUID(), BigDecimal.ONE, instant, fromAccountId, toAccountId);
+
+            // when
+            boolean result = transfer1.equals(transfer2);
+
+            // then
+            assertFalse(result);
         }
 
         @Test

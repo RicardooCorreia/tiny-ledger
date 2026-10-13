@@ -6,13 +6,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import ricardocorreia.personal.tinyledger.domain.model.Account;
+import ricardocorreia.personal.tinyledger.domain.model.Transaction;
 import ricardocorreia.personal.tinyledger.ports.api.AccountRepository;
+import ricardocorreia.personal.tinyledger.ports.api.TransactionRepository;
 
 import java.math.BigDecimal;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.instancio.Select.field;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -25,6 +29,8 @@ public class TransferFunctionalTest {
 
     @Autowired
     AccountRepository accountRepository;
+    @Autowired
+    TransactionRepository transactionRepository;
 
     @BeforeEach
     void setUp() {
@@ -49,8 +55,8 @@ public class TransferFunctionalTest {
         RestTestClient.RequestHeadersSpec<?> request = client.post()
                 .uri("/transfers")
                 .body(Map.of(
-                        "fromAccount", fromAccount.getId(),
-                        "toAccount", toAccount.getId(),
+                        "fromAccountId", fromAccount.getId(),
+                        "toAccountId", toAccount.getId(),
                         "amount", 3
                 ));
 
@@ -59,8 +65,30 @@ public class TransferFunctionalTest {
 
         // then
         result
-                .expectStatus().isCreated();
-        // TODO :: validate transaction response
+                .expectStatus().isCreated()
+                .expectHeader().valueEquals("Location", "/account/%s/transactions".formatted(fromAccount.getId()))
+                .expectBody()
+                .jsonPath("$.type").isEqualTo("TRANSFER")
+                .jsonPath("$.amount").isEqualTo(3)
+                .jsonPath("$.fromAccountId").isEqualTo(fromAccount.getId().toString())
+                .jsonPath("$.toAccountId").isEqualTo(toAccount.getId().toString())
+                .jsonPath("$.id").value(String.class, id -> {
+                    Transaction.Transfer transfer = (Transaction.Transfer) transactionRepository.findFor(fromAccount.getId()).stream()
+                            .filter(transaction -> transaction.id().toString().equals(id))
+                            .findFirst().orElseThrow();
+                    assertThat(transfer.amount()).isEqualByComparingTo("3");
+                    assertThat(transfer.fromAccountId()).isEqualTo(fromAccount.getId());
+                    assertThat(transfer.toAccountId()).isEqualTo(toAccount.getId());
+                })
+                .jsonPath("$.instant").value(String.class, instant -> {
+                    Transaction.Transfer transfer = (Transaction.Transfer) transactionRepository.findFor(fromAccount.getId()).getFirst();
+                    assertThat(instant).isEqualTo(transfer.timestamp().toString());
+                });
+
+        assertThat(accountRepository.find(fromAccount.getId()).orElseThrow().getBalance())
+                .isEqualByComparingTo("7");
+        assertThat(accountRepository.find(toAccount.getId()).orElseThrow().getBalance())
+                .isEqualByComparingTo("5");
     }
 
     @Test
@@ -79,8 +107,8 @@ public class TransferFunctionalTest {
         RestTestClient.RequestHeadersSpec<?> request = client.post()
                 .uri("/transfers")
                 .body(Map.of(
-                        "fromAccount", fromAccount.getId(),
-                        "toAccount", toAccount.getId(),
+                        "fromAccountId", fromAccount.getId(),
+                        "toAccountId", toAccount.getId(),
                         "amount", 20
                 ));
 
@@ -88,8 +116,13 @@ public class TransferFunctionalTest {
         RestTestClient.ResponseSpec result = request.exchange();
 
         // then
-        result
-                .expectStatus().is4xxClientError()
-                .expectStatus().reasonEquals("Insufficient balance");
+        result.expectStatus().isEqualTo(HttpStatus.CONFLICT)
+                .expectBody(String.class).value(body -> assertThat(body).contains("does not have enough balance"));
+        assertThat(accountRepository.find(fromAccount.getId()).orElseThrow().getBalance())
+                .isEqualByComparingTo("10");
+        assertThat(accountRepository.find(toAccount.getId()).orElseThrow().getBalance())
+                .isEqualByComparingTo("2");
+        assertThat(transactionRepository.findFor(fromAccount.getId())).isEmpty();
+        assertThat(transactionRepository.findFor(toAccount.getId())).isEmpty();
     }
 }

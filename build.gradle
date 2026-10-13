@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'jacoco'
     id 'org.springframework.boot' version '4.1.1'
     id 'io.spring.dependency-management' version '1.1.7'
 }
@@ -44,4 +45,54 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    finalizedBy tasks.named('jacocoTestReport')
+}
+
+jacoco {
+    toolVersion = '0.8.15'
+}
+
+def coverageExclusions = [
+    '**/scripts/SampleData*.class',
+    '**/TinyLedgerApplication.class',
+]
+
+def productionClassesWithoutExclusions = sourceSets.main.output.classesDirs
+def productionClassesForCoverage = files(productionClassesWithoutExclusions.files.collect { classesDir ->
+    fileTree(dir: classesDir, exclude: coverageExclusions)
+})
+
+tasks.named('jacocoTestReport') {
+    dependsOn tasks.named('test')
+    classDirectories.setFrom(productionClassesForCoverage)
+    reports {
+        html.required = true
+        xml.required = true
+    }
+}
+
+tasks.named('jacocoTestCoverageVerification') {
+    dependsOn tasks.named('test')
+    classDirectories.setFrom(productionClassesForCoverage)
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 1.0
+            }
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('jacocoTestCoverageVerification')
+}
+
+tasks.register('seedSampleData', JavaExec) {
+    group = 'application'
+    description = 'Create sample accounts and transactions in a running Tiny Ledger application.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'ricardocorreia.personal.tinyledger.scripts.SampleData'
+    args(providers.gradleProperty('baseUrl').getOrElse('http://localhost:8080'))
 }

@@ -1,5 +1,6 @@
 package ricardocorreia.personal.tinyledger.adapters.rest.response;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Value;
@@ -16,6 +17,7 @@ public class TransactionResponse {
     UUID id;
     @Schema(description = "Transaction type. Can be DEPOSIT, WITHDRAWAL or TRANSFER", example = "DEPOSIT")
     Type type;
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     @Schema(description = "Positive transaction amount.", example = "125.50", minimum = "0.01")
     BigDecimal amount;
     @Schema(description = "Time the transaction was recorded in UTC.", example = "2026-10-13T09:30:00Z", format = "date-time")

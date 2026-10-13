@@ -37,6 +37,7 @@ public final class Account {
     }
 
     public BigDecimal transfer(Account toAccount, BigDecimal amount) {
+        validatePositiveAmount(amount);
         Account first = this.id.compareTo(toAccount.id) > 0 ? this : toAccount;
         Account second = first.equals(this) ? toAccount : this;
 

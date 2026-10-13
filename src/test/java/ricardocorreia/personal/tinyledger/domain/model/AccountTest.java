@@ -100,6 +100,58 @@ class AccountTest {
     }
 
     @Test
+    void should_transfer_when_has_enough_balance() {
+
+        // given
+        Account account = new Account("Test Account");
+        Account toAccount = new Account("Other test Account");
+        account.deposit(BigDecimal.TEN);
+
+        // when
+        BigDecimal result = account.transfer(toAccount, BigDecimal.ONE);
+
+        // then
+        assertThat(result)
+                .isEqualTo(BigDecimal.valueOf(9))
+                .isEqualTo(account.getBalance());
+        assertThat(toAccount.getBalance())
+                .isEqualTo(BigDecimal.ONE);
+    }
+
+    @Test
+    void should_throw_exception_when_transferring_and_does_not_have_enough_balance() {
+
+        // given
+        Account account = new Account("Test Account");
+        Account otherAccount = new Account("Other test Account");
+        account.deposit(BigDecimal.ONE);
+
+        // when
+        ThrowableAssert.ThrowingCallable callable = () -> account.transfer(otherAccount, BigDecimal.TEN);
+
+        // then
+        assertThatThrownBy(callable)
+                .isInstanceOf(InsufficientBalanceException.class)
+                .hasMessage("Account with ID [%s] does not have enough balance. Current: [1], requested: [10], difference: [9]".formatted(account.getId()));
+    }
+
+    @Test
+    void should_throw_exception_when_transferring_negative_amount() {
+
+        // given
+        Account account = new Account("Test Account");
+        Account otherAccount = new Account("Other test Account");
+
+        // when
+        ThrowableAssert.ThrowingCallable callable = () -> account.transfer(otherAccount, BigDecimal.ONE.negate());
+
+        // then
+        assertThatThrownBy(callable)
+                .isInstanceOf(AmountIsNotPositiveException.class)
+                .hasMessage("Input amount needs to be positive, instead got [-1]");
+    }
+
+    @Test
     void should_return_same_hash_code_as_id() {
 
         // given

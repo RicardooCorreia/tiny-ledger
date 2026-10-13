@@ -1,5 +1,6 @@
 package ricardocorreia.personal.tinyledger.adapters.rest.response;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;
@@ -11,6 +12,7 @@ public record AccountResponse(
         UUID id,
         @Schema(description = "Account holder or account name", example = "Savings")
         String name,
+        @JsonFormat(shape = JsonFormat.Shape.STRING)
         @Schema(description = "Current balance", example = "125.50", minimum = "0")
         BigDecimal balance) {
 }
