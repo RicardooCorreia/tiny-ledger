@@ -6,11 +6,15 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
+import ricardocorreia.personal.tinyledger.domain.model.Transaction;
 import ricardocorreia.personal.tinyledger.domain.model.Account;
 import ricardocorreia.personal.tinyledger.domain.model.exceptions.AccountNotFoundException;
 import ricardocorreia.personal.tinyledger.ports.api.AccountRepository;
+import ricardocorreia.personal.tinyledger.ports.api.InstantProvider;
+import ricardocorreia.personal.tinyledger.ports.api.TransactionRepository;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,25 +22,34 @@ import static java.util.Optional.empty;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.instancio.Select.field;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.MockitoAnnotations.openMocks;
 
 class DepositAmountUseCaseImplTest {
 
     @Mock
     private AccountRepository accountRepository;
+    @Mock
+    private TransactionRepository transactionRepository;
+    @Mock
+    private InstantProvider instantProvider;
 
     private DepositAmountUseCaseImpl subject;
 
     @BeforeEach
     void setUp() {
         openMocks(this);
-        subject = new DepositAmountUseCaseImpl(accountRepository);
+        subject = new DepositAmountUseCaseImpl(accountRepository, transactionRepository, instantProvider);
     }
 
     @AfterEach
     void tearDown() {
-        verifyNoMoreInteractions(accountRepository);
+        verifyNoMoreInteractions(accountRepository, transactionRepository, instantProvider);
     }
 
     @Test
@@ -53,14 +66,27 @@ class DepositAmountUseCaseImplTest {
                 .when(accountRepository)
                 .find(accountId);
 
+        Instant instant = Instant.now();
+        doReturn(instant)
+                .when(instantProvider)
+                .instant();
+
+        doAnswer(call -> call.getArgument(0))
+                .when(transactionRepository)
+                .save(any());
+
         // when
-        BigDecimal result = subject.deposit(accountId, depositAmount);
+        Transaction.Deposit result = subject.deposit(accountId, depositAmount);
 
         // then
-        BigDecimal expected = BigDecimal.valueOf(11L);
+        assertThat(account.getBalance())
+                .isEqualTo(BigDecimal.valueOf(11));
         assertThat(result)
-                .isEqualTo(expected);
+                .usingRecursiveComparison()
+                .isEqualTo(new Transaction.Deposit(result.id(), depositAmount, instant, accountId));
         verify(accountRepository).find(accountId);
+        verify(transactionRepository).save(eq(result));
+        verify(instantProvider).instant();
     }
 
     @Test

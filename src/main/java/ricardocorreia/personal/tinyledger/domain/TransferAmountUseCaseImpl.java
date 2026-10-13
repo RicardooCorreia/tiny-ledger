@@ -6,21 +6,29 @@ import ricardocorreia.personal.tinyledger.domain.api.TransferAmountUseCase;
 import ricardocorreia.personal.tinyledger.domain.model.Account;
 import ricardocorreia.personal.tinyledger.domain.model.exceptions.AccountNotFoundException;
 import ricardocorreia.personal.tinyledger.domain.model.exceptions.AmountIsNotPositiveException;
+import ricardocorreia.personal.tinyledger.domain.model.exceptions.TransferToTheSameAccountException;
 import ricardocorreia.personal.tinyledger.ports.api.AccountRepository;
+import ricardocorreia.personal.tinyledger.ports.api.InstantProvider;
+import ricardocorreia.personal.tinyledger.ports.api.TransactionRepository;
 
 import java.math.BigDecimal;
 import java.util.UUID;
+
+import static ricardocorreia.personal.tinyledger.domain.model.Transaction.Transfer;
 
 @Service
 @RequiredArgsConstructor
 public class TransferAmountUseCaseImpl implements TransferAmountUseCase {
 
     private final AccountRepository accountRepository;
+    private final TransactionRepository transactionRepository;
+    private final InstantProvider instantProvider;
 
     @Override
-    public void transfer(UUID fromAccountId, UUID toAccountId, BigDecimal amount) {
+    public Transfer transfer(UUID fromAccountId, UUID toAccountId, BigDecimal amount) {
 
         validatePositiveAmount(amount);
+        validateDifferentAccountIds(fromAccountId, toAccountId);
         Account fromAccount = accountRepository.find(fromAccountId)
                 .orElseThrow(() -> new AccountNotFoundException(fromAccountId));
         Account toAccount = accountRepository.find(toAccountId)
@@ -29,11 +37,19 @@ public class TransferAmountUseCaseImpl implements TransferAmountUseCase {
         // Possible bug if we change persistence layer. Kept for simplicity
         fromAccount.withdraw(amount);
         toAccount.deposit(amount);
+
+        return transactionRepository.save(new Transfer(amount, instantProvider.instant(), fromAccountId, toAccountId));
     }
 
     private void validatePositiveAmount(BigDecimal amount) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new AmountIsNotPositiveException(amount);
+        }
+    }
+
+    private void validateDifferentAccountIds(UUID fromAccountId, UUID toAccountId) {
+        if (fromAccountId.equals(toAccountId)) {
+            throw new TransferToTheSameAccountException(fromAccountId);
         }
     }
 }

@@ -40,10 +40,7 @@ public final class Account {
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof Account other) {
-            return this.id.equals(other.id);
-        }
-        return false;
+        return obj instanceof Account other && this.id.equals(other.id);
     }
 
     private void validatePositiveAmount(BigDecimal amount) {
