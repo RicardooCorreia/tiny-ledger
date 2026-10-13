@@ -3,24 +3,28 @@ package ricardocorreia.personal.tinyledger.adapters.persistence;
 import org.instancio.Instancio;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import ricardocorreia.personal.tinyledger.domain.model.Transaction;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.instancio.Select.field;
 import static ricardocorreia.personal.tinyledger.domain.model.Transaction.Deposit;
 
-class ArrayListTransactionRepositoryTest {
+class LinkedQueueTransactionRepositoryTest {
 
-    private ArrayListTransactionRepository subject;
+    private LinkedQueueTransactionRepository subject;
 
     @BeforeEach
     void setUp() {
-        subject = new ArrayListTransactionRepository();
+        subject = new LinkedQueueTransactionRepository();
     }
 
     @Test
@@ -60,5 +64,24 @@ class ArrayListTransactionRepositoryTest {
         // then
         assertThat(result)
                 .containsExactly(relatedDeposit);
+    }
+
+    @Test
+    @Timeout(value = 5L, unit = TimeUnit.SECONDS)
+    void should_save_all_transactions_when_writing_concurrently() {
+
+        // given
+        int transactionsToSave = 80_000;
+
+        // when
+        try (ExecutorService executorService = Executors.newFixedThreadPool(10)) {
+            for (int i = 0; i < transactionsToSave; i++) {
+                executorService.submit(() -> subject.save(new Deposit(BigDecimal.ONE, Instant.EPOCH, UUID.randomUUID())));
+            }
+        }
+
+        // then
+        assertThat(subject.getAll())
+                .hasSize(transactionsToSave);
     }
 }

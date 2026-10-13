@@ -8,6 +8,8 @@ import ricardocorreia.personal.tinyledger.domain.model.exceptions.InsufficientBa
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -153,5 +155,69 @@ class AccountTest {
 
         // then
         assertFalse(result);
+    }
+
+    @Test
+    void should_stay_consistent_under_concurrent_deposits() {
+
+        // given
+        Account account = new Account("Test Account");
+        int iterations = 10_000;
+
+        // when
+        try (ExecutorService executorService = Executors.newFixedThreadPool(10)) {
+            for (int i = 0; i < iterations; i++) {
+                executorService.submit(() -> account.deposit(BigDecimal.ONE));
+            }
+        }
+
+        // then
+        assertThat(account.getBalance()).isEqualTo(BigDecimal.valueOf(iterations));
+    }
+
+    @Test
+    void should_stay_consistent_under_concurrent_withdrawals() {
+
+        // given
+        Account account = new Account("Test Account");
+        int iterations = 10_000;
+        account.deposit(BigDecimal.valueOf(iterations));
+
+        // when
+        try (ExecutorService executorService = Executors.newFixedThreadPool(10)) {
+            for (int i = 0; i < iterations; i++) {
+                executorService.submit(() -> account.withdraw(BigDecimal.ONE));
+            }
+        }
+
+        // then
+        assertThat(account.getBalance()).isEqualTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void should_stay_consistent_under_concurrent_transfers_in_both_directions() {
+
+        // given
+        Account fromAccount = new Account("Test Account 1");
+        Account toAccount = new Account("Test Account 2");
+        int iterations = 10_000;
+        BigDecimal expectedBalance = BigDecimal.valueOf(iterations / 2);
+        fromAccount.deposit(expectedBalance);
+        toAccount.deposit(expectedBalance);
+
+        // when
+        try (ExecutorService executorService = Executors.newFixedThreadPool(10)) {
+            for (int i = 0; i < iterations; i++) {
+                if (i % 2 == 0) {
+                    executorService.submit(() -> fromAccount.transfer(toAccount, BigDecimal.ONE));
+                } else {
+                    executorService.submit(() -> toAccount.transfer(fromAccount, BigDecimal.ONE));
+                }
+            }
+        }
+
+        // then
+        assertThat(fromAccount.getBalance()).isEqualTo(expectedBalance);
+        assertThat(toAccount.getBalance()).isEqualTo(expectedBalance);
     }
 }

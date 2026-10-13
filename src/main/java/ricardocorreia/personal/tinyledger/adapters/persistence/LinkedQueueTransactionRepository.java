@@ -5,13 +5,15 @@ import ricardocorreia.personal.tinyledger.domain.model.Transaction;
 import ricardocorreia.personal.tinyledger.ports.api.TransactionRepository;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 @Component
-public class ArrayListTransactionRepository implements TransactionRepository {
+public class LinkedQueueTransactionRepository implements TransactionRepository {
 
-    private final List<Transaction> transactions = new ArrayList<>(); // Does not scale very well
+    private final Collection<Transaction> transactions = new ConcurrentLinkedQueue<>(); // Does not scale very well
 
     @Override
     public <T extends Transaction> T save(T transaction) {

@@ -26,9 +26,7 @@ public class WithdrawAmountUseCaseImpl implements WithdrawAmountUseCase {
     public Withdrawal withdraw(UUID accountId, BigDecimal amount) {
         Account account = accountRepository.find(accountId)
                 .orElseThrow(() -> new AccountNotFoundException(accountId));
-
         account.withdraw(amount); // Possible bug if we change persistence layer. Kept for simplicity
-
         return transactionRepository.save(new Withdrawal(amount, instantProvider.instant(), accountId));
     }
 }

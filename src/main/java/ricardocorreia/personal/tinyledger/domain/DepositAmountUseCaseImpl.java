@@ -23,12 +23,10 @@ public class DepositAmountUseCaseImpl implements DepositAmountUseCase {
     private final InstantProvider instantProvider;
 
     @Override
-    public Deposit deposit(UUID accountId, BigDecimal amount) { // todo :: not thread safe
+    public Deposit deposit(UUID accountId, BigDecimal amount) {
         Account account = accountRepository.find(accountId)
                 .orElseThrow(() -> new AccountNotFoundException(accountId));
-
         account.deposit(amount); // Possible bug if we change persistence layer. Kept for simplicity
-
         return transactionRepository.save(new Deposit(amount, instantProvider.instant(), accountId));
     }
 }

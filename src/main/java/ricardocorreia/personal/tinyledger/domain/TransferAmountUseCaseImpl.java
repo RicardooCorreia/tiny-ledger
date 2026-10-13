@@ -33,11 +33,7 @@ public class TransferAmountUseCaseImpl implements TransferAmountUseCase {
                 .orElseThrow(() -> new AccountNotFoundException(fromAccountId));
         Account toAccount = accountRepository.find(toAccountId)
                 .orElseThrow(() -> new AccountNotFoundException(toAccountId));
-
-        // Possible bug if we change persistence layer. Kept for simplicity
-        fromAccount.withdraw(amount);
-        toAccount.deposit(amount);
-
+        fromAccount.transfer(toAccount, amount);
         return transactionRepository.save(new Transfer(amount, instantProvider.instant(), fromAccountId, toAccountId));
     }
 

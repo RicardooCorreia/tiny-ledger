@@ -4,16 +4,15 @@ import org.springframework.stereotype.Component;
 import ricardocorreia.personal.tinyledger.domain.model.Account;
 import ricardocorreia.personal.tinyledger.ports.api.AccountRepository;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class HashMapAccountRepository implements AccountRepository {
 
-    // todo :: not thread safe
-    private final Map<UUID, Account> repository = new HashMap<>();
+    private final Map<UUID, Account> repository = new ConcurrentHashMap<>();
 
     @Override
     public Optional<Account> find(UUID id) {
@@ -24,5 +23,9 @@ public class HashMapAccountRepository implements AccountRepository {
     public Account upsert(Account account) {
         repository.put(account.getId(), account);
         return account;
+    }
+
+    int size() {
+        return repository.size();
     }
 }

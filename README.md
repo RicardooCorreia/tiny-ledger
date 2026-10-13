@@ -16,7 +16,7 @@ A simple REST API for recording money movements, retrieving the current balance,
 - Authentication and authorization
 - Persistent data layer
 - Logging and monitoring
-- Atomicity and multi thread safety (!)
+- Atomicity
 - Money multi currency transfers
 - Account management and deletion
 - Caching and other types of performance optimization
