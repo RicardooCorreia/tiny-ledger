@@ -40,7 +40,6 @@ public final class Account {
         validatePositiveAmount(amount);
         Account first = this.id.compareTo(toAccount.id) > 0 ? this : toAccount;
         Account second = first.equals(this) ? toAccount : this;
-
         return first.doWithWriteLock(() ->
                 second.doWithWriteLock(() -> {
                             this.unsafeSubtractBalance(amount);

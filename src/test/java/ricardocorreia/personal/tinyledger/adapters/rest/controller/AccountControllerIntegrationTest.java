@@ -16,6 +16,7 @@ import ricardocorreia.personal.tinyledger.domain.api.GetAccountDetailsUseCase;
 import ricardocorreia.personal.tinyledger.domain.model.Account;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.Mockito.doReturn;
@@ -71,7 +72,7 @@ class AccountControllerIntegrationTest {
         String accountName = "New Account";
         Account account = new Account(accountName);
         AccountResponse accountResponse = new AccountResponse(accountId, account.getName(), account.getBalance());
-        doReturn(account)
+        doReturn(Optional.of(account))
                 .when(getAccountDetailsUseCase)
                 .get(accountId);
         doReturn(accountResponse)

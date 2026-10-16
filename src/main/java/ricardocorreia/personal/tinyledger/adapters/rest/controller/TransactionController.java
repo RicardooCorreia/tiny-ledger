@@ -109,7 +109,7 @@ public class TransactionController {
                             mediaType = "text/plain",
                             examples = @ExampleObject(value = "Account with ID [550e8400-e29b-41d4-a716-446655440000] not found"))),
             @ApiResponse(
-                    responseCode = "409",
+                    responseCode = "409", // 422
                     description = "Insufficient balance",
                     content = @Content(
                             mediaType = "text/plain",
